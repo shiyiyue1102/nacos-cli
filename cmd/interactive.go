@@ -7,7 +7,8 @@ import (
 )
 
 var interactiveCmd = &cobra.Command{
-	Use:   "interactive",
+	Use: "interactive",
+
 	Short: "Start interactive terminal mode",
 	Long:  `Start an interactive terminal for managing Nacos configurations and skills`,
 	Run: func(cmd *cobra.Command, args []string) {
