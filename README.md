@@ -178,11 +178,65 @@ nacos> quit           # Exit terminal
 
 | Flag | Short | Default | Description |
 |------|-------|---------|-------------|
-| --server | -s | 127.0.0.1:8848 | Nacos server address |
+| --host | | 127.0.0.1 | Nacos server host |
+| --port | | 8848 | Nacos server port |
+| --server | -s | 127.0.0.1:8848 | Nacos server address (deprecated, use --host and --port) |
 | --username | -u | nacos | Nacos username |
 | --password | -p | nacos | Nacos password |
 | --namespace | -n | (empty/public) | Nacos namespace ID |
+| --config | -c | | Path to configuration file |
 | --help | -h | | Show help information |
+
+## Configuration File
+
+You can use a configuration file to avoid typing credentials every time:
+
+```bash
+# Create a config file
+cat > local.conf << EOF
+host: 127.0.0.1
+port: 8848
+username: nacos
+password: nacos
+namespace: ""
+EOF
+
+# Use the config file
+nacos-cli --config ./local.conf skill-list
+```
+
+### Configuration File Format
+
+The configuration file uses YAML format:
+
+```yaml
+# Nacos server host
+host: 127.0.0.1
+
+# Nacos server port
+port: 8848
+
+# Username for authentication
+username: nacos
+
+# Password for authentication
+password: nacos
+
+# Namespace ID (optional, leave empty for public namespace)
+namespace: ""
+```
+
+### Configuration Priority
+
+Configuration values are applied in the following priority order:
+1. **Command line arguments** (highest priority)
+2. **Configuration file**
+3. **Default values** (lowest priority)
+
+For example:
+- `nacos-cli --config ./local.conf --host 10.0.0.1` - Uses `10.0.0.1` from command line, other values from config file
+- `nacos-cli --host 192.168.1.100 --port 8848` - Uses command line values, defaults for username/password
+- `nacos-cli --config ./local.conf` - Uses all values from config file
 
 ## Project Structure
 
