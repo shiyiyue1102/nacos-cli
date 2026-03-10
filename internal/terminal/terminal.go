@@ -353,14 +353,12 @@ func (t *Terminal) listSkills(args []string) {
 	}
 }
 
-// getSkill downloads a skill
+// getSkill downloads one or more skills
 func (t *Terminal) getSkill(args []string) {
 	if len(args) == 0 {
-		fmt.Println("\033[31mUsage:\033[0m skill-get <skillName>")
+		fmt.Println("\033[31mUsage:\033[0m skill-get <skillName> [skillName2...]")
 		return
 	}
-
-	skillName := args[0]
 
 	// Default output directory
 	homeDir, err := os.UserHomeDir()
@@ -370,16 +368,38 @@ func (t *Terminal) getSkill(args []string) {
 	}
 	outputDir := filepath.Join(homeDir, ".skills")
 
-	fmt.Printf("\033[90mDownloading skill: \033[33m%s\033[90m...\033[0m\n", skillName)
+	// Track results
+	var successCount, failCount int
+	var failedSkills []string
 
-	err = t.skillService.GetSkill(skillName, outputDir)
-	if err != nil {
-		fmt.Printf("\033[31mError:\033[0m %v\n", err)
-		return
+	// Process each skill
+	for i, skillName := range args {
+		if len(args) > 1 {
+			fmt.Printf("\n\033[90m[%d/%d] \033[0m", i+1, len(args))
+		}
+		fmt.Printf("\033[90mDownloading skill: \033[33m%s\033[90m...\033[0m\n", skillName)
+
+		err = t.skillService.GetSkill(skillName, outputDir)
+		if err != nil {
+			fmt.Printf("\033[31mError:\033[0m failed to download skill '%s': %v\n", skillName, err)
+			failCount++
+			failedSkills = append(failedSkills, skillName)
+		} else {
+			fmt.Printf("\033[32mSkill downloaded successfully!\033[0m\n")
+			fmt.Printf("  \033[90mLocation:\033[0m %s/%s\n", outputDir, skillName)
+			successCount++
+		}
 	}
 
-	fmt.Printf("\033[32mSkill downloaded successfully!\033[0m\n")
-	fmt.Printf("  \033[90mLocation:\033[0m %s/%s\n", outputDir, skillName)
+	// Summary for multiple skills
+	if len(args) > 1 {
+		fmt.Println()
+		fmt.Println("\033[36m========== Summary ==========\033[0m")
+		fmt.Printf("Total: %d | \033[32mSuccess:\033[0m %d | \033[31mFailed:\033[0m %d\n", len(args), successCount, failCount)
+		if failCount > 0 {
+			fmt.Printf("Failed skills: \033[31m%s\033[0m\n", strings.Join(failedSkills, ", "))
+		}
+	}
 }
 
 // uploadSkill uploads a skill

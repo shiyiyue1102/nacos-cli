@@ -17,12 +17,12 @@ var (
 )
 
 var getSkillCmd = &cobra.Command{
-	Use:   "skill-get [skillName]",
-	Short: "Get a skill and download it locally",
+	Use:   "skill-get [skillName...]",
+	Short: "Get one or more skills and download them locally",
 	Long:  help.SkillGet.FormatForCLI("nacos-cli"),
-	Args:  cobra.ExactArgs(1),
+	Args:  cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		skillName := args[0]
+		skillNames := args
 
 		// Default output directory
 		if getSkillOutput == "" {
@@ -48,14 +48,42 @@ var getSkillCmd = &cobra.Command{
 		// Create skill service
 		skillService := skill.NewSkillService(nacosClient)
 
-		// Get skill
-		fmt.Printf("Fetching skill: %s...\n", skillName)
-		err := skillService.GetSkill(skillName, getSkillOutput)
-		checkError(err)
+		// Track results
+		var successCount, failCount int
+		var failedSkills []string
 
-		skillPath := filepath.Join(getSkillOutput, skillName)
-		fmt.Printf("Skill downloaded successfully!\n")
-		fmt.Printf("  Location: %s\n", skillPath)
+		// Process each skill
+		for i, skillName := range skillNames {
+			if len(skillNames) > 1 {
+				fmt.Printf("\n[%d/%d] ", i+1, len(skillNames))
+			}
+			fmt.Printf("Fetching skill: %s...\n", skillName)
+			err := skillService.GetSkill(skillName, getSkillOutput)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error: failed to download skill '%s': %v\n", skillName, err)
+				failCount++
+				failedSkills = append(failedSkills, skillName)
+			} else {
+				skillPath := filepath.Join(getSkillOutput, skillName)
+				fmt.Printf("Skill downloaded successfully!\n")
+				fmt.Printf("  Location: %s\n", skillPath)
+				successCount++
+			}
+		}
+
+		// Summary
+		if len(skillNames) > 1 {
+			fmt.Printf("\n========== Summary ==========\n")
+			fmt.Printf("Total: %d | Success: %d | Failed: %d\n", len(skillNames), successCount, failCount)
+			if failCount > 0 {
+				fmt.Printf("Failed skills: %s\n", strings.Join(failedSkills, ", "))
+			}
+		}
+
+		// Exit with error if any skill failed
+		if failCount > 0 {
+			os.Exit(1)
+		}
 	},
 }
 
