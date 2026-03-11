@@ -409,18 +409,57 @@ func (t *Terminal) uploadSkill(args []string) {
 		return
 	}
 
-	// Check for --all flag
-	if args[0] == "--all" {
-		if len(args) < 2 {
+	// Check for --all flag in any position
+	allFlagIndex := -1
+	folderPath := ""
+	for i, arg := range args {
+		if arg == "--all" {
+			allFlagIndex = i
+			// Get folder path from next argument or previous argument
+			if i+1 < len(args) {
+				folderPath = args[i+1]
+			}
+			break
+		}
+	}
+
+	// If --all found but no folder after it, check if folder is before --all
+	if allFlagIndex >= 0 && folderPath == "" {
+		if allFlagIndex > 0 {
+			folderPath = args[allFlagIndex-1]
+		}
+	}
+
+	if allFlagIndex >= 0 {
+		if folderPath == "" {
 			fmt.Println("Error: folder path required for --all flag")
+			fmt.Println("Usage: skill-upload --all <folder> or skill-upload <folder> --all")
 			return
 		}
-		t.uploadAllSkills(args[1])
+		t.uploadAllSkills(folderPath)
 		return
 	}
 
 	// Single skill upload
 	skillPath := args[0]
+
+	// Expand ~ to home directory
+	if strings.HasPrefix(skillPath, "~/") {
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			fmt.Printf("Error getting home directory: %v\n", err)
+			return
+		}
+		skillPath = filepath.Join(homeDir, skillPath[2:])
+	} else if skillPath == "~" {
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			fmt.Printf("Error getting home directory: %v\n", err)
+			return
+		}
+		skillPath = homeDir
+	}
+
 	fmt.Printf("Uploading skill: %s...\n", skillPath)
 
 	err := t.skillService.UploadSkill(skillPath)
@@ -434,6 +473,23 @@ func (t *Terminal) uploadSkill(args []string) {
 
 // uploadAllSkills uploads all skills in a directory
 func (t *Terminal) uploadAllSkills(folderPath string) {
+	// Expand ~ to home directory
+	if strings.HasPrefix(folderPath, "~/") {
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			fmt.Printf("Error getting home directory: %v\n", err)
+			return
+		}
+		folderPath = filepath.Join(homeDir, folderPath[2:])
+	} else if folderPath == "~" {
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			fmt.Printf("Error getting home directory: %v\n", err)
+			return
+		}
+		folderPath = homeDir
+	}
+
 	// List subdirectories
 	entries, err := os.ReadDir(folderPath)
 	if err != nil {
